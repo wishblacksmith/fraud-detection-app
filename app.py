@@ -6,10 +6,10 @@ import numpy as np
 @st.cache_resource
 def load_models():
     model = joblib.load('fraud_model.pkl')
-    scaler = joblib.load('scaler.pkl')
-    return model, scaler
+    # Scaler'a artık ihtiyacımız yok, sadece modeli yüklüyoruz
+    return model
 
-model, scaler = load_models()
+model = load_models()
 
 st.title("💳 Kredi Kartı Dolandırıcılık Tespiti (Fraud Detection)")
 st.write("Bu uygulama, yapay sinir ağları ve makine öğrenmesi kullanarak şüpheli kredi kartı işlemlerini anında tespit eder.")
@@ -32,7 +32,7 @@ if normal_test:
     default_v1, default_v2, default_v4, default_v14, default_v17 = 0.1, -0.2, 0.3, 0.1, -0.1
 
 if fraud_test:
-    default_amount = 25000.0  # Çok yüksek tutar
+    default_amount = 25000.0  # Yüksek tutar
     default_v1, default_v2, default_v4, default_v14, default_v17 = -25.5, 18.4, 8.2, -15.5, -18.1 # Şüpheli PCA bileşenleri
 
 amount = st.number_input("İşlem Tutarı (Amount)", min_value=0.0, max_value=1000000.0, value=default_amount)
@@ -54,9 +54,8 @@ if st.button("İşlemi Analiz Et"):
     input_data[0, 13] = v14 
     input_data[0, 16] = v17 
     
-    # Tutarı modelin eğtildiği formata (Scaled Amount) dönüştürüyoruz
-    scaled_amount = scaler.transform([[amount]])[0][0]
-    input_data[0, -1] = scaled_amount # Ölçeklenmiş tutarı son sütuna ekliyoruz
+    # Tutarı doğrudan son sütuna ekliyoruz
+    input_data[0, -1] = amount 
     
     prediction = model.predict(input_data)
     probability = model.predict_proba(input_data)
