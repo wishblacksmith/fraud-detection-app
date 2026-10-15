@@ -32,10 +32,10 @@ if normal_test:
     default_v1, default_v2, default_v4, default_v14, default_v17 = 0.1, -0.2, 0.3, 0.1, -0.1
 
 if fraud_test:
-    default_amount = 1500.0  # Yüksek tutar
-    default_v1, default_v2, default_v4, default_v14, default_v17 = -15.5, 12.4, 6.2, -10.5, -12.1 # Şüpheli PCA bileşenleri
+    default_amount = 25000.0  # Çok yüksek tutar
+    default_v1, default_v2, default_v4, default_v14, default_v17 = -25.5, 18.4, 8.2, -15.5, -18.1 # Şüpheli PCA bileşenleri
 
-amount = st.number_input("İşlem Tutarı (Amount)", min_value=0.0, max_value=100000.0, value=default_amount)
+amount = st.number_input("İşlem Tutarı (Amount)", min_value=0.0, max_value=1000000.0, value=default_amount)
 
 st.write("*(Modelin duyarlı olduğu kritik PCA özellikleri)*")
 v1 = st.slider("V1 Bileşeni", -30.0, 30.0, default_v1)
@@ -47,13 +47,16 @@ v17 = st.slider("V17 Bileşeni", -30.0, 30.0, default_v17)
 if st.button("İşlemi Analiz Et"):
     input_data = np.zeros((1, 29))
     
-    # Kullanıcıdan alınan değerleri uygun yerlere yerleştiriyoruz
+    # PCA bileşenlerini yerleştiriyoruz
     input_data[0, 0] = v1
     input_data[0, 1] = v2
-    input_data[0, 3] = v4   # V4
-    input_data[0, 13] = v14 # V14
-    input_data[0, 16] = v17 # V17
-    input_data[0, -1] = amount # Amount
+    input_data[0, 3] = v4   
+    input_data[0, 13] = v14 
+    input_data[0, 16] = v17 
+    
+    # Tutarı modelin eğtildiği formata (Scaled Amount) dönüştürüyoruz
+    scaled_amount = scaler.transform([[amount]])[0][0]
+    input_data[0, -1] = scaled_amount # Ölçeklenmiş tutarı son sütuna ekliyoruz
     
     prediction = model.predict(input_data)
     probability = model.predict_proba(input_data)
