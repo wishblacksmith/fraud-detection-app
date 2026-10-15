@@ -1,9 +1,9 @@
+%%writefile app.py
 import streamlit as st
 import pandas as pd
 import joblib
 import numpy as np
 
-# Modelimizi ve scaler'ımızı yüklüyoruz
 @st.cache_resource
 def load_models():
     model = joblib.load('fraud_model.pkl')
@@ -15,36 +15,53 @@ model, scaler = load_models()
 st.title("💳 Kredi Kartı Dolandırıcılık Tespiti (Fraud Detection)")
 st.write("Bu uygulama, yapay sinir ağları ve makine öğrenmesi kullanarak şüpheli kredi kartı işlemlerini anında tespit eder.")
 
-st.subheader("İşlem Detaylarını Girin:")
+st.subheader("İşlem Simülasyonu ve Detayları:")
 
-# Kullanıcıdan temel verileri alalım
-amount = st.number_input("İşlem Tutarı (Amount)", min_value=0.0, max_value=100000.0, value=150.0)
+# Hızlı test için hazır senaryo butonları
+col_btn1, col_btn2 = st.columns(2)
+with col_btn1:
+    normal_test = st.button("🟢 Normal İşlem Örneği Yükle")
+with col_btn2:
+    fraud_test = st.button("🔴 Şüpheli (Fraud) İşlem Örneği Yükle")
 
-# Görsel amaçlı ek kullanıcı girdileri (V1 ve V2 gibi temel PCA bileşenleri)
-col1, col2 = st.columns(2)
-with col1:
-    v1 = st.slider("V1 Bileşeni", -30.0, 30.0, 0.0)
-with col2:
-    v2 = st.slider("V2 Bileşeni", -30.0, 30.0, 0.0)
+# Varsayılan değerler
+default_amount = 50.0
+default_v1, default_v2, default_v4, default_v14, default_v17 = 0.0, 0.0, 0.0, 0.0, 0.0
+
+if normal_test:
+    default_amount = 45.0
+    default_v1, default_v2, default_v4, default_v14, default_v17 = 0.1, -0.2, 0.3, 0.1, -0.1
+
+if fraud_test:
+    default_amount = 1500.0  # Yüksek tutar
+    default_v1, default_v2, default_v4, default_v14, default_v17 = -15.5, 12.4, 6.2, -10.5, -12.1 # Şüpheli PCA bileşenleri
+
+amount = st.number_input("İşlem Tutarı (Amount)", min_value=0.0, max_value=100000.0, value=default_amount)
+
+st.write("*(Modelin duyarlı olduğu kritik PCA özellikleri)*")
+v1 = st.slider("V1 Bileşeni", -30.0, 30.0, default_v1)
+v2 = st.slider("V2 Bileşeni", -30.0, 30.0, default_v2)
+v4 = st.slider("V4 Bileşeni", -30.0, 30.0, default_v4)
+v14 = st.slider("V14 Bileşeni", -30.0, 30.0, default_v14)
+v17 = st.slider("V17 Bileşeni", -30.0, 30.0, default_v17)
 
 if st.button("İşlemi Analiz Et"):
-    # Modelimiz 29 özellik bekliyor. Örnek bir matris oluşturalım:
     input_data = np.zeros((1, 29))
     
-    # Kullanıcıdan aldığımız değerleri uygun yerlere yazalım
-    input_data[0, 0] = v1  # V1
-    input_data[0, 1] = v2  # V2
+    # Kullanıcıdan alınan değerleri uygun yerlere yerleştiriyoruz
+    input_data[0, 0] = v1
+    input_data[0, 1] = v2
+    input_data[0, 3] = v4   # V4
+    input_data[0, 13] = v14 # V14
+    input_data[0, 16] = v17 # V17
+    input_data[0, -1] = amount # Amount
     
-    # Amount sütununu ölçeklendirerek ekleyelim (Amount 28. indeks veya ölçeklenmiş hali)
-    # Modelin beklediği sütun sırasına göre Amount'u ekliyoruz
-    input_data[0, -1] = amount 
-    
-    # Tahmin yapalım
     prediction = model.predict(input_data)
     probability = model.predict_proba(input_data)
     
-    # Sonucu ekrana yazdıralım
     if prediction[0] == 1:
         st.error(f"🚨 DİKKAT! Bu işlem ŞÜPHELİ / DOLANDIRICILIK olabilir! (Risk Oranı: %{probability[0][1]*100:.2f})")
+    else:
+        st.success(f"✅ Bu işlem GÜVENLİ görünmektedir. (Güven Oranı: %{probability[0][0]*100:.2f})")
     else:
         st.success(f"✅ Bu işlem GÜVENLİ görünmektedir. (Güven Oranı: %{probability[0][0]*100:.2f})")
